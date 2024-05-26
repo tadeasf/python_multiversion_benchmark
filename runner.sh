@@ -5,7 +5,7 @@ VERSIONS=("3.5.10" "3.6.15" "3.7.17" "3.8.10" "3.9.17" "3.10.14" "3.11.9" "3.12.
 
 # Duration for each benchmark (in seconds)
 BENCHMARK_DURATION=1
-REPEATS=100
+REPEATS=25
 
 # Function to run the benchmark using the given Python or PyPy version
 run_benchmark() {
@@ -57,25 +57,22 @@ def cpu_benchmark(duration):
     start_time = time.time()
     iterations = 0
     
-    def fibonacci(n):
-        a, b = 0, 1
-        for _ in range(n):
-            a, b = b, a + b
-        return a
-    
-    def is_prime(n):
+    def recursive_fibonacci(n):
         if n <= 1:
-            return False
-        for i in range(2, int(n**0.5) + 1):
-            if n % i == 0:
-                return False
-        return True
+            return n
+        else:
+            return recursive_fibonacci(n-1) + recursive_fibonacci(n-2)
+    
+    def string_manipulation(s):
+        return s[::-1] * 1000  # Reverse the string and repeat it 1000 times
+    
+    def list_comprehension(n):
+        return [i * 2 for i in range(n)]
     
     while time.time() - start_time < duration:
-        fibonacci(30)
-        data = [random.random() for _ in range(10000)]
-        data.sort()
-        primes = [num for num in range(2, 1000) if is_prime(num)]
+        recursive_fibonacci(20)
+        string_manipulation("benchmark")
+        list_comprehension(10000)
         iterations += 1
     
     logging.info("CPU benchmark completed {} iterations".format(iterations))
@@ -89,7 +86,8 @@ def memory_benchmark():
     start_time = time.time()
     try:
         with open("daytrip.users.json", "r") as f:
-            f.read()
+            data = f.read()
+            json.loads(data)  # Parsing JSON content
     except json.JSONDecodeError as e:
         logging.error("JSONDecodeError: {}".format(e))
     end_time = time.time()
