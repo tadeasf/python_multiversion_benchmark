@@ -1,3 +1,36 @@
+#!/bin/bash
+
+# List of Python and PyPy versions to benchmark
+VERSIONS=("3.5.10" "3.6.15" "3.7.17" "3.8.10" "3.9.17" "3.10.14" "3.11.9" "3.12.3" "3.13.0b1" "pypy3.8-7.3.11" "pypy3.9-7.3.16" "pypy3.10-7.3.16")
+
+# Initial benchmark values set for the lowest Python version
+CPU_ITERATIONS=400
+IO_WRITE_ITERATIONS=5000
+IO_READ_ITERATIONS=25000
+MEMORY_ITERATIONS=1000
+
+# Function to run the benchmark using the given Python or PyPy version
+run_benchmark() {
+	local version=$1
+	local cpu_iterations=$2
+	local io_write_iterations=$3
+	local io_read_iterations=$4
+	local memory_iterations=$5
+
+	if [[ $version == pypy* ]]; then
+		# Switch to the specified PyPy version using pyenv
+		pyenv local "$version"
+	else
+		# Switch to the specified Python version using pyenv
+		pyenv local "$version"
+	fi
+
+	# Run the benchmark with the specified version
+	python benchmark_temp.py "$cpu_iterations" "$io_write_iterations" "$io_read_iterations" "$memory_iterations"
+}
+
+# Create the temporary Python script with the adjusted benchmark values
+cat <<EOF >benchmark_temp.py
 import time
 import os
 import random
@@ -6,9 +39,7 @@ from datetime import datetime
 import sys
 
 # Capture Python version and create a log file name with it
-python_version = "{}.{}.{}".format(
-    sys.version_info.major, sys.version_info.minor, sys.version_info.micro
-)
+python_version = "{}.{}.{}".format(sys.version_info.major, sys.version_info.minor, sys.version_info.micro)
 log_file_name = "benchmark_{}.log".format(python_version)
 
 # Setup logger
@@ -18,14 +49,12 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
 )
 
-
 # CPU Benchmark: Fibonacci Calculation
 def fibonacci(n):
     if n <= 1:
         return n
     else:
         return fibonacci(n - 1) + fibonacci(n - 2)
-
 
 def fibonacci_benchmark(iterations):
     logging.info("Starting Fibonacci benchmark...")
@@ -39,7 +68,6 @@ def fibonacci_benchmark(iterations):
     print("Fibonacci benchmark completed in {:.2f} seconds".format(duration))
     return duration
 
-
 # CPU Benchmark: Sorting
 def sort_benchmark(size):
     data = [random.random() for _ in range(size)]
@@ -51,7 +79,6 @@ def sort_benchmark(size):
     print("Sorting benchmark completed in {:.2f} seconds".format(duration))
     return duration
 
-
 # CPU Benchmark: Prime Number Calculation
 def is_prime(n):
     if n <= 1:
@@ -60,7 +87,6 @@ def is_prime(n):
         if n % i == 0:
             return False
     return True
-
 
 def prime_benchmark(limit):
     logging.info("Starting Prime Number benchmark...")
@@ -76,14 +102,12 @@ def prime_benchmark(limit):
     print("Prime Number benchmark completed in {:.2f} seconds".format(duration))
     return duration
 
-
 # CPU Benchmark: Factorial Calculation
 def factorial(n):
     if n == 0:
         return 1
     else:
         return n * factorial(n - 1)
-
 
 def factorial_benchmark(iterations):
     logging.info("Starting Factorial benchmark...")
@@ -97,7 +121,6 @@ def factorial_benchmark(iterations):
     print("Factorial benchmark completed in {:.2f} seconds".format(duration))
     return duration
 
-
 def cpu_benchmark(cpu_iterations):
     total_duration = 0
     total_duration += fibonacci_benchmark(cpu_iterations)
@@ -105,7 +128,6 @@ def cpu_benchmark(cpu_iterations):
     total_duration += prime_benchmark(1000)
     total_duration += factorial_benchmark(cpu_iterations)
     return total_duration
-
 
 # I/O Benchmark: File Read/Write
 def io_benchmark(io_write_iterations, io_read_iterations):
@@ -121,9 +143,7 @@ def io_benchmark(io_write_iterations, io_read_iterations):
             f.write(data)
     end_time = time.time()
     write_duration = end_time - start_time
-    logging.info(
-        "I/O write benchmark completed in {:.2f} seconds".format(write_duration)
-    )
+    logging.info("I/O write benchmark completed in {:.2f} seconds".format(write_duration))
     print("I/O write benchmark completed in {:.2f} seconds".format(write_duration))
 
     # Read Benchmark
@@ -138,9 +158,8 @@ def io_benchmark(io_write_iterations, io_read_iterations):
 
     # Clean up
     os.remove(filename)
-
+    
     return write_duration + read_duration
-
 
 # Memory Benchmark: List Operations
 def memory_benchmark(memory_iterations):
@@ -154,7 +173,6 @@ def memory_benchmark(memory_iterations):
     logging.info("Memory benchmark completed in {:.2f} seconds".format(duration))
     print("Memory benchmark completed in {:.2f} seconds".format(duration))
     return duration
-
 
 def main(cpu_iterations, io_write_iterations, io_read_iterations, memory_iterations):
     start_time_total = datetime.now()
@@ -174,13 +192,30 @@ def main(cpu_iterations, io_write_iterations, io_read_iterations, memory_iterati
     logging.info("Total benchmark time: {:.2f} seconds".format(total_time))
     print("Total benchmark time: {:.2f} seconds".format(total_time))
 
-
 if __name__ == "__main__":
     # Pass the iteration values as arguments
     import sys
-
     cpu_iterations = int(sys.argv[1])
     io_write_iterations = int(sys.argv[2])
     io_read_iterations = int(sys.argv[3])
     memory_iterations = int(sys.argv[4])
     main(cpu_iterations, io_write_iterations, io_read_iterations, memory_iterations)
+EOF
+
+# Run the benchmark for each specified version
+for version in "${VERSIONS[@]}"; do
+	echo "Running benchmark for $version..."
+	run_benchmark "$version" "$CPU_ITERATIONS" "$IO_WRITE_ITERATIONS" "$IO_READ_ITERATIONS" "$MEMORY_ITERATIONS"
+
+	# If it's the first iteration, adjust the benchmark values based on the lowest version
+	if [ "$version" == "${VERSIONS[0]}" ]; then
+		echo "Adjusting benchmark values based on the lowest version ($version)..."
+		CPU_ITERATIONS=400
+		IO_WRITE_ITERATIONS=5000
+		IO_READ_ITERATIONS=25000
+		MEMORY_ITERATIONS=1000
+	fi
+done
+
+# Clean up temporary files
+rm benchmark_temp.py
