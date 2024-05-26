@@ -214,7 +214,19 @@ for version in "${VERSIONS[@]}"; do
 	# If it's the first iteration, adjust the benchmark values based on the lowest version
 	if [ "$version" == "${VERSIONS[0]}" ]; then
 		echo "Adjusting benchmark values based on the lowest version ($version)..."
-		CPU_ITERATIONS=400
+		# Adjust iterations for sorting benchmark
+		SORT_ITERATIONS=$(($CPU_ITERATIONS * 80 / 64)) # 80 seconds for sorting
+
+		# Adjust iterations for prime number benchmark
+		PRIME_ITERATIONS=$(($CPU_ITERATIONS * 50 / 64)) # 50 seconds for prime number
+
+		# Adjust iterations for factorial benchmark
+		FACTORIAL_ITERATIONS=$(($CPU_ITERATIONS * 10 / 64)) # 10 seconds for factorial
+
+		# Update CPU_ITERATIONS to include adjusted benchmarks
+		CPU_ITERATIONS=$(($SORT_ITERATIONS + $PRIME_ITERATIONS + $FACTORIAL_ITERATIONS))
+
+		# Keep the same IO and memory iterations
 		IO_WRITE_ITERATIONS=5000
 		IO_READ_ITERATIONS=25000
 		MEMORY_ITERATIONS=1000
