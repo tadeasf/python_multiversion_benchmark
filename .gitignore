@@ -3,3 +3,4 @@
 *.log
 benchmark_temp.py
 *.txt
+*.json

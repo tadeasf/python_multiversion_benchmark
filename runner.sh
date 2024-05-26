@@ -32,6 +32,7 @@ import random
 import logging
 from datetime import datetime
 import sys
+import json
 
 # Capture Python version and create a log file name with it
 python_version = "{}.{}.{}".format(sys.version_info.major, sys.version_info.minor, sys.version_info.micro)
@@ -44,6 +45,14 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
 )
 
+# Convert bytes to a human-readable format
+def human_readable(byte_value):
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
+        if byte_value < 1024.0:
+            return "{:.2f} {}".format(byte_value, unit)
+        byte_value /= 1024.0
+    return "{:.2f} PB".format(byte_value)
+
 # Robust CPU Benchmark
 def cpu_benchmark(duration):
     logging.info("Starting CPU benchmark...")
@@ -52,10 +61,10 @@ def cpu_benchmark(duration):
     iterations = 0
     
     def fibonacci(n):
-        if n <= 1:
-            return n
-        else:
-            return fibonacci(n - 1) + fibonacci(n - 2)
+        a, b = 0, 1
+        for _ in range(n):
+            a, b = b, a + b
+        return a
     
     def is_prime(n):
         if n <= 1:
@@ -80,27 +89,22 @@ def cpu_benchmark(duration):
 def io_benchmark(duration):
     logging.info("Starting I/O benchmark...")
     print("Starting I/O benchmark...")
-    filename = "test_io_benchmark.txt"
-    data = "A" * (10**7)  # 10 MB of data
 
     start_time = time.time()
-    write_bytes = 0
     read_bytes = 0
-    while time.time() - start_time < duration:
-        with open(filename, "w") as f:
-            f.write(data)
-        write_bytes += len(data)
-        with open(filename, "r") as f:
-            f.read()
-        read_bytes += len(data)
-    
-    logging.info("I/O write benchmark wrote {} bytes".format(write_bytes))
-    print("I/O write benchmark wrote {} bytes".format(write_bytes))
-    logging.info("I/O read benchmark read {} bytes".format(read_bytes))
-    print("I/O read benchmark read {} bytes".format(read_bytes))
 
-    os.remove(filename)
-    return write_bytes, read_bytes
+    while time.time() - start_time < duration:
+        with open("daytrip.users.json", "r") as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                break
+        read_bytes += os.path.getsize("daytrip.users.json")
+    
+    logging.info("I/O read benchmark read {} bytes ({})".format(read_bytes, human_readable(read_bytes)))
+    print("I/O read benchmark read {} bytes ({})".format(read_bytes, human_readable(read_bytes)))
+
+    return read_bytes
 
 # Robust Memory Benchmark
 def memory_benchmark(duration):
@@ -121,7 +125,7 @@ def main(duration):
     print("Benchmark started at {}".format(start_time_total))
 
     cpu_iterations = cpu_benchmark(duration)
-    write_bytes, read_bytes = io_benchmark(duration)
+    read_bytes = io_benchmark(duration)
     memory_iterations = memory_benchmark(duration)
 
     end_time_total = datetime.now()
@@ -135,8 +139,8 @@ def main(duration):
     # Return results for logging
     return {
         "cpu_iterations": cpu_iterations,
-        "write_bytes": write_bytes,
         "read_bytes": read_bytes,
+        "read_bytes_hr": human_readable(read_bytes),
         "memory_iterations": memory_iterations
     }
 
@@ -155,26 +159,13 @@ EOF
 median() {
 	arr=($(printf '%s\n' "$@" | sort -n))
 	len=${#arr[@]}
-	if (($len % 2 == 0)); then
+	if [ \$len -eq 0 ]; then
+		echo 0
+	elif (($len % 2 == 0)); then
 		echo $(((${arr[len / 2 - 1]} + ${arr[len / 2]}) / 2))
 	else
 		echo ${arr[len / 2]}
 	fi
-}
-
-# Function to convert bytes to a human-readable format
-human_readable() {
-	local bytes=$1
-	local units=("B" "KB" "MB" "GB" "TB")
-
-	for unit in "${units[@]}"; do
-		if ((bytes < 1024)); then
-			echo "$bytes $unit"
-			return
-		fi
-		bytes=$((bytes / 1024))
-	done
-	echo "$bytes ${units[-1]}"
 }
 
 # Run the benchmark for each specified version and collect results
@@ -184,7 +175,6 @@ results=()
 for version in "${VERSIONS[@]}"; do
 	echo "Running benchmark for $version..."
 	cpu_iterations=()
-	write_bytes=()
 	read_bytes=()
 	memory_iterations=()
 
@@ -192,22 +182,20 @@ for version in "${VERSIONS[@]}"; do
 		output=$(run_benchmark "$version" "$BENCHMARK_DURATION")
 
 		cpu_iterations+=($(echo "$output" | grep 'cpu_iterations=' | cut -d'=' -f2))
-		write_bytes+=($(echo "$output" | grep 'write_bytes=' | cut -d'=' -f2))
 		read_bytes+=($(echo "$output" | grep 'read_bytes=' | cut -d'=' -f2))
 		memory_iterations+=($(echo "$output" | grep 'memory_iterations=' | cut -d'=' -f2))
 	done
 
 	cpu_median=$(median "${cpu_iterations[@]}")
-	write_median=$(median "${write_bytes[@]}")
 	read_median=$(median "${read_bytes[@]}")
-	memory_median=$(median "${memory_iterations[@]}")
+	memory_median=$(median "${memory_iterations[@]}"])
 
-	results+=("$version,$cpu_median,$write_median,$read_median,$memory_median")
+	results+=("$version,$cpu_median,$read_median,$memory_median")
 
 	# If it's the first iteration, save it as the baseline
 	if [ "$version" == "${VERSIONS[0]}" ]; then
 		echo "Saving baseline results for $version..."
-		baseline_results=("$version,$cpu_median,$write_median,$read_median,$memory_median")
+		baseline_results=("$version,$cpu_median,$read_median,$memory_median")
 	fi
 done
 
@@ -219,21 +207,20 @@ for result in "${results[@]}"; do
 	result_array=(${result//,/ })
 	version=${result_array[0]}
 	echo -e "Version: $version"
-	for i in {1..4}; do
+	for i in {1..3}; do
 		benchmark_name=""
 		case $i in
 		1) benchmark_name="cpu_iterations" ;;
-		2) benchmark_name="write_bytes" ;;
-		3) benchmark_name="read_bytes" ;;
-		4) benchmark_name="memory_iterations" ;;
+		2) benchmark_name="read_bytes" ;;
+		3) benchmark_name="memory_iterations" ;;
 		esac
 		current_value=${result_array[$i]}
 		baseline_value=${baseline_result[$i]}
 		percentage=$(echo "scale=2; ($current_value / $baseline_value) * 100" | bc)
 		performance_difference=$(echo "scale=2; $percentage - 100" | bc)
-		if [[ $benchmark_name == "write_bytes" || $benchmark_name == "read_bytes" ]]; then
-			current_value_hr=$(human_readable $current_value)
-			baseline_value_hr=$(human_readable $baseline_value)
+		if [[ $benchmark_name == "read_bytes" ]]; then
+			current_value_hr=$(python3 -c "print('{}', '{}'.format(*['{:.2f} {}'.format($current_value / 1024 ** i, unit) for i, unit in enumerate(['B', 'KB', 'MB', 'GB', 'TB', 'PB']) if $current_value < 1024 ** (i + 1)][0]))")
+			baseline_value_hr=$(python3 -c "print('{}', '{}'.format(*['{:.2f} {}'.format($baseline_value / 1024 ** i, unit) for i, unit in enumerate(['B', 'KB', 'MB', 'GB', 'TB', 'PB']) if $baseline_value < 1024 ** (i + 1)][0]))")
 			echo -e "$benchmark_name: $current_value_hr (Baseline: $baseline_value_hr, Performance: $percentage%, Difference: $performance_difference%)"
 		else
 			echo -e "$benchmark_name: $current_value (Baseline: $baseline_value, Performance: $percentage%, Difference: $performance_difference%)"

@@ -4,6 +4,7 @@ import random
 import logging
 from datetime import datetime
 import sys
+import json
 
 # Capture Python version and create a log file name with it
 python_version = "{}.{}.{}".format(
@@ -19,6 +20,15 @@ logging.basicConfig(
 )
 
 
+# Convert bytes to a human-readable format
+def human_readable(byte_value):
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
+        if byte_value < 1024.0:
+            return "{:.2f} {}".format(byte_value, unit)
+        byte_value /= 1024.0
+    return "{:.2f} PB".format(byte_value)
+
+
 # Robust CPU Benchmark
 def cpu_benchmark(duration):
     logging.info("Starting CPU benchmark...")
@@ -27,10 +37,10 @@ def cpu_benchmark(duration):
     iterations = 0
 
     def fibonacci(n):
-        if n <= 1:
-            return n
-        else:
-            return fibonacci(n - 1) + fibonacci(n - 2)
+        a, b = 0, 1
+        for _ in range(n):
+            a, b = b, a + b
+        return a
 
     def is_prime(n):
         if n <= 1:
@@ -56,27 +66,30 @@ def cpu_benchmark(duration):
 def io_benchmark(duration):
     logging.info("Starting I/O benchmark...")
     print("Starting I/O benchmark...")
-    filename = "test_io_benchmark.txt"
-    data = "A" * (10**7)  # 10 MB of data
 
     start_time = time.time()
-    write_bytes = 0
     read_bytes = 0
+
     while time.time() - start_time < duration:
-        with open(filename, "w") as f:
-            f.write(data)
-        write_bytes += len(data)
-        with open(filename, "r") as f:
-            f.read()
-        read_bytes += len(data)
+        with open("daytrip.users.json", "r") as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                break
+        read_bytes += os.path.getsize("daytrip.users.json")
 
-    logging.info("I/O write benchmark wrote {} bytes".format(write_bytes))
-    print("I/O write benchmark wrote {} bytes".format(write_bytes))
-    logging.info("I/O read benchmark read {} bytes".format(read_bytes))
-    print("I/O read benchmark read {} bytes".format(read_bytes))
+    logging.info(
+        "I/O read benchmark read {} bytes ({})".format(
+            read_bytes, human_readable(read_bytes)
+        )
+    )
+    print(
+        "I/O read benchmark read {} bytes ({})".format(
+            read_bytes, human_readable(read_bytes)
+        )
+    )
 
-    os.remove(filename)
-    return write_bytes, read_bytes
+    return read_bytes
 
 
 # Robust Memory Benchmark
@@ -99,7 +112,7 @@ def main(duration):
     print("Benchmark started at {}".format(start_time_total))
 
     cpu_iterations = cpu_benchmark(duration)
-    write_bytes, read_bytes = io_benchmark(duration)
+    read_bytes = io_benchmark(duration)
     memory_iterations = memory_benchmark(duration)
 
     end_time_total = datetime.now()
@@ -113,8 +126,8 @@ def main(duration):
     # Return results for logging
     return {
         "cpu_iterations": cpu_iterations,
-        "write_bytes": write_bytes,
         "read_bytes": read_bytes,
+        "read_bytes_hr": human_readable(read_bytes),
         "memory_iterations": memory_iterations,
     }
 
@@ -129,3 +142,4 @@ if __name__ == "__main__":
     # Print results for logging
     for key, value in results.items():
         print("{}={}".format(key, value))
+
