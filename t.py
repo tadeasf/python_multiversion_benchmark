@@ -1,7 +1,7 @@
 import json
 
 
-def append_json(file_path, repetitions=5):
+def append_json(file_path, repetitions=1):
     # Read the original content of the file
     with open(file_path, "r") as file:
         data = json.load(file)

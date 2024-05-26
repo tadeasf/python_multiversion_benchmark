@@ -5,7 +5,7 @@ VERSIONS=("3.5.10" "3.6.15" "3.7.17" "3.8.10" "3.9.17" "3.10.14" "3.11.9" "3.12.
 
 # Duration for each benchmark (in seconds)
 BENCHMARK_DURATION=1
-REPEATS=10
+REPEATS=100
 
 # Function to run the benchmark using the given Python or PyPy version
 run_benchmark() {

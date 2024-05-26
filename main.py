@@ -1,7 +1,6 @@
 import time
-import os
-import random
 import logging
+import random
 from datetime import datetime
 import sys
 import json
@@ -20,13 +19,16 @@ logging.basicConfig(
 )
 
 
-# Convert bytes to a human-readable format
-def human_readable(byte_value):
-    for unit in ["B", "KB", "MB", "GB", "TB"]:
-        if byte_value < 1024.0:
-            return "{:.2f} {}".format(byte_value, unit)
-        byte_value /= 1024.0
-    return "{:.2f} PB".format(byte_value)
+# Convert time to a human-readable format
+def human_readable_time(seconds):
+    if seconds < 1:
+        return "{:.2f} ms".format(seconds * 1000)
+    elif seconds < 60:
+        return "{:.2f} s".format(seconds)
+    elif seconds < 3600:
+        return "{:.2f} min".format(seconds / 60)
+    else:
+        return "{:.2f} hours".format(seconds / 3600)
 
 
 # Robust CPU Benchmark
@@ -62,52 +64,29 @@ def cpu_benchmark(duration):
     return iterations
 
 
-# Robust I/O Benchmark
-def io_benchmark(duration):
-    logging.info("Starting I/O benchmark...")
-    print("Starting I/O benchmark...")
-
-    start_time = time.time()
-    read_bytes = 0
-
-    while time.time() - start_time < duration:
-        try:
-            with open("daytrip.users.json", "r") as f:
-                while True:
-                    chunk = f.read(1024 * 1024)  # Read 1MB at a time
-                    if not chunk:
-                        break
-                    read_bytes += len(chunk)
-        except json.JSONDecodeError as e:
-            logging.error("JSONDecodeError: {}".format(e))
-            break
-
-    logging.info(
-        "I/O read benchmark read {} bytes ({})".format(
-            read_bytes, human_readable(read_bytes)
-        )
-    )
-    print(
-        "I/O read benchmark read {} bytes ({})".format(
-            read_bytes, human_readable(read_bytes)
-        )
-    )
-
-    return read_bytes
-
-
-# Robust Memory Benchmark
-def memory_benchmark(duration):
+# Memory Benchmark to measure read time
+def memory_benchmark():
     logging.info("Starting Memory benchmark...")
     print("Starting Memory benchmark...")
     start_time = time.time()
-    iterations = 0
-    while time.time() - start_time < duration:
-        lst = [random.random() for _ in range(10**6)]
-        iterations += 1
-    logging.info("Memory benchmark completed {} iterations".format(iterations))
-    print("Memory benchmark completed {} iterations".format(iterations))
-    return iterations
+    try:
+        with open("daytrip.users.json", "r") as f:
+            f.read()
+    except json.JSONDecodeError as e:
+        logging.error("JSONDecodeError: {}".format(e))
+    end_time = time.time()
+    duration = end_time - start_time
+    logging.info(
+        "Memory benchmark read duration: {} seconds ({})".format(
+            duration, human_readable_time(duration)
+        )
+    )
+    print(
+        "Memory benchmark read duration: {} seconds ({})".format(
+            duration, human_readable_time(duration)
+        )
+    )
+    return duration
 
 
 def main(duration):
@@ -116,8 +95,7 @@ def main(duration):
     print("Benchmark started at {}".format(start_time_total))
 
     cpu_iterations = cpu_benchmark(duration)
-    read_bytes = io_benchmark(duration)
-    memory_iterations = memory_benchmark(duration)
+    memory_duration = memory_benchmark()
 
     end_time_total = datetime.now()
     logging.info("Benchmark completed at {}".format(end_time_total))
@@ -130,9 +108,7 @@ def main(duration):
     # Return results for logging
     return {
         "cpu_iterations": cpu_iterations,
-        "read_bytes": read_bytes,
-        "read_bytes_hr": human_readable(read_bytes),
-        "memory_iterations": memory_iterations,
+        "memory_duration": memory_duration,
     }
 
 
