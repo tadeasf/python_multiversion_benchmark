@@ -41,10 +41,13 @@ def fibonacci_benchmark(iterations):
 
 
 # CPU Benchmark: Sorting
-def sort_benchmark(size):
-    data = [random.random() for _ in range(size)]
+def sort_benchmark(iterations, size):
+    logging.info("Starting Sorting benchmark...")
+    print("Starting Sorting benchmark...")
     start_time = time.time()
-    data.sort()
+    for _ in range(iterations):
+        data = [random.random() for _ in range(size)]
+        data.sort()
     end_time = time.time()
     duration = end_time - start_time
     logging.info("Sorting benchmark completed in {:.2f} seconds".format(duration))
@@ -62,14 +65,15 @@ def is_prime(n):
     return True
 
 
-def prime_benchmark(limit):
+def prime_benchmark(iterations, limit):
     logging.info("Starting Prime Number benchmark...")
     print("Starting Prime Number benchmark...")
     start_time = time.time()
-    primes = []
-    for num in range(2, limit):
-        if is_prime(num):
-            primes.append(num)
+    for _ in range(iterations):
+        primes = []
+        for num in range(2, limit):
+            if is_prime(num):
+                primes.append(num)
     end_time = time.time()
     duration = end_time - start_time
     logging.info("Prime Number benchmark completed in {:.2f} seconds".format(duration))
@@ -101,8 +105,8 @@ def factorial_benchmark(iterations):
 def cpu_benchmark(cpu_iterations):
     total_duration = 0
     total_duration += fibonacci_benchmark(cpu_iterations)
-    total_duration += sort_benchmark(10000)
-    total_duration += prime_benchmark(1000)
+    total_duration += sort_benchmark(cpu_iterations, 10000)
+    total_duration += prime_benchmark(cpu_iterations, 1000)
     total_duration += factorial_benchmark(cpu_iterations)
     return total_duration
 

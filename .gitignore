@@ -1,2 +1,4 @@
 .python-version
 .vscode
+*.log
+benchmark_temp.py
