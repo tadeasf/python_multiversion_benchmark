@@ -27,32 +27,32 @@ def fibonacci(n):
         return fibonacci(n - 1) + fibonacci(n - 2)
 
 
-def fibonacci_benchmark(iterations):
+def fibonacci_benchmark(duration):
     logging.info("Starting Fibonacci benchmark...")
     print("Starting Fibonacci benchmark...")
     start_time = time.time()
-    for _ in range(iterations):
+    iterations = 0
+    while time.time() - start_time < duration:
         fibonacci(30)
-    end_time = time.time()
-    duration = end_time - start_time
-    logging.info("Fibonacci benchmark completed in {:.2f} seconds".format(duration))
-    print("Fibonacci benchmark completed in {:.2f} seconds".format(duration))
-    return duration
+        iterations += 1
+    logging.info("Fibonacci benchmark completed {} iterations".format(iterations))
+    print("Fibonacci benchmark completed {} iterations".format(iterations))
+    return iterations
 
 
 # CPU Benchmark: Sorting
-def sort_benchmark(iterations, size):
+def sort_benchmark(duration, size):
     logging.info("Starting Sorting benchmark...")
     print("Starting Sorting benchmark...")
     start_time = time.time()
-    for _ in range(iterations):
+    iterations = 0
+    while time.time() - start_time < duration:
         data = [random.random() for _ in range(size)]
         data.sort()
-    end_time = time.time()
-    duration = end_time - start_time
-    logging.info("Sorting benchmark completed in {:.2f} seconds".format(duration))
-    print("Sorting benchmark completed in {:.2f} seconds".format(duration))
-    return duration
+        iterations += 1
+    logging.info("Sorting benchmark completed {} iterations".format(iterations))
+    print("Sorting benchmark completed {} iterations".format(iterations))
+    return iterations
 
 
 # CPU Benchmark: Prime Number Calculation
@@ -65,20 +65,20 @@ def is_prime(n):
     return True
 
 
-def prime_benchmark(iterations, limit):
+def prime_benchmark(duration, limit):
     logging.info("Starting Prime Number benchmark...")
     print("Starting Prime Number benchmark...")
     start_time = time.time()
-    for _ in range(iterations):
+    iterations = 0
+    while time.time() - start_time < duration:
         primes = []
         for num in range(2, limit):
             if is_prime(num):
                 primes.append(num)
-    end_time = time.time()
-    duration = end_time - start_time
-    logging.info("Prime Number benchmark completed in {:.2f} seconds".format(duration))
-    print("Prime Number benchmark completed in {:.2f} seconds".format(duration))
-    return duration
+        iterations += 1
+    logging.info("Prime Number benchmark completed {} iterations".format(iterations))
+    print("Prime Number benchmark completed {} iterations".format(iterations))
+    return iterations
 
 
 # CPU Benchmark: Factorial Calculation
@@ -89,30 +89,29 @@ def factorial(n):
         return n * factorial(n - 1)
 
 
-def factorial_benchmark(iterations):
+def factorial_benchmark(duration):
     logging.info("Starting Factorial benchmark...")
     print("Starting Factorial benchmark...")
     start_time = time.time()
-    for _ in range(iterations):
+    iterations = 0
+    while time.time() - start_time < duration:
         factorial(20)
-    end_time = time.time()
-    duration = end_time - start_time
-    logging.info("Factorial benchmark completed in {:.2f} seconds".format(duration))
-    print("Factorial benchmark completed in {:.2f} seconds".format(duration))
-    return duration
+        iterations += 1
+    logging.info("Factorial benchmark completed {} iterations".format(iterations))
+    print("Factorial benchmark completed {} iterations".format(iterations))
+    return iterations
 
 
-def cpu_benchmark(cpu_iterations):
-    total_duration = 0
-    total_duration += fibonacci_benchmark(cpu_iterations)
-    total_duration += sort_benchmark(cpu_iterations, 10000)
-    total_duration += prime_benchmark(cpu_iterations, 1000)
-    total_duration += factorial_benchmark(cpu_iterations)
-    return total_duration
+def cpu_benchmark(duration):
+    fibonacci_iterations = fibonacci_benchmark(duration)
+    sort_iterations = sort_benchmark(duration, 10000)
+    prime_iterations = prime_benchmark(duration, 1000)
+    factorial_iterations = factorial_benchmark(duration)
+    return fibonacci_iterations, sort_iterations, prime_iterations, factorial_iterations
 
 
 # I/O Benchmark: File Read/Write
-def io_benchmark(io_write_iterations, io_read_iterations):
+def io_benchmark(duration):
     logging.info("Starting I/O benchmark...")
     print("Starting I/O benchmark...")
     filename = "test_io_benchmark.txt"
@@ -120,55 +119,54 @@ def io_benchmark(io_write_iterations, io_read_iterations):
 
     # Write Benchmark
     start_time = time.time()
-    for _ in range(io_write_iterations):
+    write_bytes = 0
+    while time.time() - start_time < duration:
         with open(filename, "w") as f:
             f.write(data)
-    end_time = time.time()
-    write_duration = end_time - start_time
-    logging.info(
-        "I/O write benchmark completed in {:.2f} seconds".format(write_duration)
-    )
-    print("I/O write benchmark completed in {:.2f} seconds".format(write_duration))
+        write_bytes += len(data)
+    logging.info("I/O write benchmark wrote {} bytes".format(write_bytes))
+    print("I/O write benchmark wrote {} bytes".format(write_bytes))
 
     # Read Benchmark
     start_time = time.time()
-    for _ in range(io_read_iterations):
+    read_bytes = 0
+    while time.time() - start_time < duration:
         with open(filename, "r") as f:
             f.read()
-    end_time = time.time()
-    read_duration = end_time - start_time
-    logging.info("I/O read benchmark completed in {:.2f} seconds".format(read_duration))
-    print("I/O read benchmark completed in {:.2f} seconds".format(read_duration))
+        read_bytes += len(data)
+    logging.info("I/O read benchmark read {} bytes".format(read_bytes))
+    print("I/O read benchmark read {} bytes".format(read_bytes))
 
     # Clean up
     os.remove(filename)
 
-    return write_duration + read_duration
+    return write_bytes, read_bytes
 
 
 # Memory Benchmark: List Operations
-def memory_benchmark(memory_iterations):
+def memory_benchmark(duration):
     logging.info("Starting Memory benchmark...")
     print("Starting Memory benchmark...")
     start_time = time.time()
-    for _ in range(memory_iterations):
+    iterations = 0
+    while time.time() - start_time < duration:
         lst = [random.random() for _ in range(10**6)]
-    end_time = time.time()
-    duration = end_time - start_time
-    logging.info("Memory benchmark completed in {:.2f} seconds".format(duration))
-    print("Memory benchmark completed in {:.2f} seconds".format(duration))
-    return duration
+        iterations += 1
+    logging.info("Memory benchmark completed {} iterations".format(iterations))
+    print("Memory benchmark completed {} iterations".format(iterations))
+    return iterations
 
 
-def main(cpu_iterations, io_write_iterations, io_read_iterations, memory_iterations):
+def main(duration):
     start_time_total = datetime.now()
     logging.info("Benchmark started at {}".format(start_time_total))
     print("Benchmark started at {}".format(start_time_total))
 
-    total_duration = 0
-    total_duration += cpu_benchmark(cpu_iterations)
-    total_duration += io_benchmark(io_write_iterations, io_read_iterations)
-    total_duration += memory_benchmark(memory_iterations)
+    fibonacci_iterations, sort_iterations, prime_iterations, factorial_iterations = (
+        cpu_benchmark(duration)
+    )
+    write_bytes, read_bytes = io_benchmark(duration)
+    memory_iterations = memory_benchmark(duration)
 
     end_time_total = datetime.now()
     logging.info("Benchmark completed at {}".format(end_time_total))
@@ -178,13 +176,26 @@ def main(cpu_iterations, io_write_iterations, io_read_iterations, memory_iterati
     logging.info("Total benchmark time: {:.2f} seconds".format(total_time))
     print("Total benchmark time: {:.2f} seconds".format(total_time))
 
+    # Return results for logging
+    return {
+        "fibonacci_iterations": fibonacci_iterations,
+        "sort_iterations": sort_iterations,
+        "prime_iterations": prime_iterations,
+        "factorial_iterations": factorial_iterations,
+        "write_bytes": write_bytes,
+        "read_bytes": read_bytes,
+        "memory_iterations": memory_iterations,
+    }
+
 
 if __name__ == "__main__":
-    # Pass the iteration values as arguments
+    # Pass the duration as an argument
     import sys
 
-    cpu_iterations = int(sys.argv[1])
-    io_write_iterations = int(sys.argv[2])
-    io_read_iterations = int(sys.argv[3])
-    memory_iterations = int(sys.argv[4])
-    main(cpu_iterations, io_write_iterations, io_read_iterations, memory_iterations)
+    duration = int(sys.argv[1])
+    results = main(duration)
+
+    # Print results for logging
+    for key, value in results.items():
+        print("{}={}".format(key, value))
+
