@@ -129,4 +129,3 @@ if __name__ == "__main__":
     # Print results for logging
     for key, value in results.items():
         print("{}={}".format(key, value))
-

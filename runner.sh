@@ -162,6 +162,21 @@ median() {
 	fi
 }
 
+# Function to convert bytes to a human-readable format
+human_readable() {
+	local bytes=$1
+	local units=("B" "KB" "MB" "GB" "TB")
+
+	for unit in "${units[@]}"; do
+		if ((bytes < 1024)); then
+			echo "$bytes $unit"
+			return
+		fi
+		bytes=$((bytes / 1024))
+	done
+	echo "$bytes ${units[-1]}"
+}
+
 # Run the benchmark for each specified version and collect results
 baseline_results=()
 results=()
@@ -216,7 +231,13 @@ for result in "${results[@]}"; do
 		baseline_value=${baseline_result[$i]}
 		percentage=$(echo "scale=2; ($current_value / $baseline_value) * 100" | bc)
 		performance_difference=$(echo "scale=2; $percentage - 100" | bc)
-		echo -e "$benchmark_name: $current_value (Baseline: $baseline_value, Performance: $percentage%, Difference: $performance_difference%)"
+		if [[ $benchmark_name == "write_bytes" || $benchmark_name == "read_bytes" ]]; then
+			current_value_hr=$(human_readable $current_value)
+			baseline_value_hr=$(human_readable $baseline_value)
+			echo -e "$benchmark_name: $current_value_hr (Baseline: $baseline_value_hr, Performance: $percentage%, Difference: $performance_difference%)"
+		else
+			echo -e "$benchmark_name: $current_value (Baseline: $baseline_value, Performance: $percentage%, Difference: $performance_difference%)"
+		fi
 	done
 	echo -e "\n"
 done
