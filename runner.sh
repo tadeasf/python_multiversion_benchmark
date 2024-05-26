@@ -4,7 +4,8 @@
 VERSIONS=("3.5.10" "3.6.15" "3.7.17" "3.8.10" "3.9.17" "3.10.14" "3.11.9" "3.12.3" "3.13.0b1" "pypy3.8-7.3.11" "pypy3.9-7.3.16" "pypy3.10-7.3.16")
 
 # Duration for each benchmark (in seconds)
-BENCHMARK_DURATION=30
+BENCHMARK_DURATION=5
+REPEATS=3
 
 # Function to run the benchmark using the given Python or PyPy version
 run_benchmark() {
@@ -150,26 +151,48 @@ if __name__ == "__main__":
         print("{}={}".format(key, value))
 EOF
 
+# Function to calculate the median of an array
+median() {
+	arr=($(printf '%s\n' "$@" | sort -n))
+	len=${#arr[@]}
+	if (($len % 2 == 0)); then
+		echo $(((${arr[len / 2 - 1]} + ${arr[len / 2]}) / 2))
+	else
+		echo ${arr[len / 2]}
+	fi
+}
+
 # Run the benchmark for each specified version and collect results
 baseline_results=()
 results=()
 
 for version in "${VERSIONS[@]}"; do
 	echo "Running benchmark for $version..."
-	output=$(run_benchmark "$version" "$BENCHMARK_DURATION")
+	cpu_iterations=()
+	write_bytes=()
+	read_bytes=()
+	memory_iterations=()
 
-	# Extract results from output
-	cpu_iterations=$(echo "$output" | grep 'cpu_iterations=' | cut -d'=' -f2)
-	write_bytes=$(echo "$output" | grep 'write_bytes=' | cut -d'=' -f2)
-	read_bytes=$(echo "$output" | grep 'read_bytes=' | cut -d'=' -f2)
-	memory_iterations=$(echo "$output" | grep 'memory_iterations=' | cut -d'=' -f2)
+	for _ in $(seq 1 $REPEATS); do
+		output=$(run_benchmark "$version" "$BENCHMARK_DURATION")
 
-	results+=("$version,$cpu_iterations,$write_bytes,$read_bytes,$memory_iterations")
+		cpu_iterations+=($(echo "$output" | grep 'cpu_iterations=' | cut -d'=' -f2))
+		write_bytes+=($(echo "$output" | grep 'write_bytes=' | cut -d'=' -f2))
+		read_bytes+=($(echo "$output" | grep 'read_bytes=' | cut -d'=' -f2))
+		memory_iterations+=($(echo "$output" | grep 'memory_iterations=' | cut -d'=' -f2))
+	done
+
+	cpu_median=$(median "${cpu_iterations[@]}")
+	write_median=$(median "${write_bytes[@]}")
+	read_median=$(median "${read_bytes[@]}")
+	memory_median=$(median "${memory_iterations[@]}")
+
+	results+=("$version,$cpu_median,$write_median,$read_median,$memory_median")
 
 	# If it's the first iteration, save it as the baseline
 	if [ "$version" == "${VERSIONS[0]}" ]; then
 		echo "Saving baseline results for $version..."
-		baseline_results=("$version,$cpu_iterations,$write_bytes,$read_bytes,$memory_iterations")
+		baseline_results=("$version,$cpu_median,$write_median,$read_median,$memory_median")
 	fi
 done
 
