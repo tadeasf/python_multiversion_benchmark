@@ -94,12 +94,16 @@ def io_benchmark(duration):
     read_bytes = 0
 
     while time.time() - start_time < duration:
-        with open("daytrip.users.json", "r") as f:
-            try:
-                data = json.load(f)
-            except json.JSONDecodeError:
-                break
-        read_bytes += os.path.getsize("daytrip.users.json")
+        try:
+            with open("daytrip.users.json", "r") as f:
+                while True:
+                    chunk = f.read(1024 * 1024)  # Read 1MB at a time
+                    if not chunk:
+                        break
+                    read_bytes += len(chunk)
+        except json.JSONDecodeError as e:
+            logging.error("JSONDecodeError: {}".format(e))
+            break
     
     logging.info("I/O read benchmark read {} bytes ({})".format(read_bytes, human_readable(read_bytes)))
     print("I/O read benchmark read {} bytes ({})".format(read_bytes, human_readable(read_bytes)))
@@ -159,12 +163,12 @@ EOF
 median() {
 	arr=($(printf '%s\n' "$@" | sort -n))
 	len=${#arr[@]}
-	if [ \$len -eq 0 ]; then
+	if [ $len -eq 0 ]; then
 		echo 0
 	elif (($len % 2 == 0)); then
-		echo $(((${arr[len / 2 - 1]} + ${arr[len / 2]}) / 2))
+		echo $(((${arr[$((len / 2 - 1))]} + ${arr[$((len / 2))]}) / 2))
 	else
-		echo ${arr[len / 2]}
+		echo ${arr[$((len / 2))]}
 	fi
 }
 
