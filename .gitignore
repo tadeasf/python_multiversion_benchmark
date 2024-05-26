@@ -2,3 +2,4 @@
 .vscode
 *.log
 benchmark_temp.py
+*.txt
